@@ -168,10 +168,10 @@ Content-Length: <length>\r\n\r\n'
 
   ```json
   {
-      "token": <token>
+      "token": <token>,
+      "username":<username>,
       "who": <username>,
-      "msg": <message>,
-      "token": <token>
+      "msg": <message>
   }
   ```
 
@@ -182,12 +182,11 @@ Content-Length: <length>\r\n\r\n'
   {
       "code": <code>,
       "msg": <message>,
-      "type": "friends-list",
-      "list": ["a","b"...]
+      "type": "send-msg"
   }
   ```
   | code | msg             |
-| ---- | --------------- |
+  | ---- | --------------- |
 | 0    | send successful |
 | 1    | invalid token   |
 | 2    | user is offline |

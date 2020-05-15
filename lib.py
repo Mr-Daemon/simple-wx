@@ -15,11 +15,6 @@ def parse_header(header: bytes):
     return first_line, obj
 
 
-def parse_target(target, body):
-    obj: dict = {'name': 'cyb', 'age': 18}
-    return obj
-
-
 HEADER_TEMPLATE = 'HTTP/1.1 200 OK\r\nContent-Type:text/json;charset=utf-8\r\nConnection:' \
                   'keep-alive\r\nContent-Length:{}\r\n\r\n'
 

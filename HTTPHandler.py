@@ -1,3 +1,4 @@
+import json
 import selectors
 import socket
 
@@ -5,13 +6,12 @@ import lib
 
 
 class Handler:
-    target_list = ['register', 'login', 'friend-list', 'add-friend', 'sendmsg', 'offline']
-
-    def __init__(self, sel, sock, addr, log):
+    def __init__(self, sel, sock, addr, log, db_handler):
         self.sel: selectors.BaseSelector = sel
         self.sock: socket.socket = sock
         self.addr = addr
         self.log = log
+        self.db_handler = db_handler
         self._recv_buffer = b''
         self._send_buffer = b''
         self.target = ''
@@ -68,9 +68,18 @@ class Handler:
         self._write()
 
     def create_response(self, target, body):
-        obj = lib.parse_target(target, body)
+        j_body = json.loads(body.decode('utf-8'))
+        obj = self.db_handler.process_target(target, j_body)
         self._send_buffer = lib.get_message(obj)
         self._response_created = True
+        if target == 'login' and obj['code'] == 0:
+            self.sel.sock_dict[j_body['username']] = self.sock
+            self.log.log('connection to ' + repr(self.addr) + j_body['username'] + ' added')
+        elif target == 'offline':
+            self.sel.sock_dict.pop(j_body['username'])
+            self.log.log('connection to ' + repr(self.addr) + j_body['username'] + ' removed')
+        elif target == 'send-msg':
+            msg = j_body['msg']
 
     def _write(self):
         if self._send_buffer:
@@ -78,10 +87,10 @@ class Handler:
             self.log.log('send ' + repr(self._send_buffer[:index]) + ' to ' + str(self.addr))
             self._send_buffer = self._send_buffer[index:]
             if index and not self._send_buffer:
-                self.close()
+                self.finish()
                 self._change_state('r')
 
-    def close(self):
+    def finish(self):
         self.log.log('finish sending response to ' + str(self.addr))
         self._recv_buffer = b''
         self._send_buffer = b''
@@ -90,3 +99,9 @@ class Handler:
         self._body_len = 0
         self._request_body = b''
         self._response_created = False
+
+    def close(self):
+        self.sel.unregister(self.sock)
+        self.sock.close()
+        self.sock = None
+        self.log.log('connection to ' + repr(self.addr) + ' closed')
