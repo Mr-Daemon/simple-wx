@@ -15,11 +15,11 @@ class Handler:
         self.connection.commit()
         self.connection.close()
 
-    def process_target(self, target, body):
+    def process_target(self, target, body, ip):
         if target == 'register':
             return self.register(body['username'], body['password'])
         elif target == 'login':
-            return self.login(body['username'], body['password'])
+            return self.login(body['username'], body['password'], ip)
         elif target == 'friends-list':
             return self.friends_list(body['username'], body['token'])
         elif target == 'add-friend':
@@ -39,39 +39,40 @@ class Handler:
             result['code'] = 1
             result['msg'] = 'duplicate username'
         else:
-            self.cur.execute('INSERT INTO User VALUES (?,?,?,?)',
-                             (username, password, False, 0))
+            self.cur.execute('INSERT INTO User VALUES (?,?,?,?,?)',
+                             (username, password, False, 0, ''))
             self.connection.commit()
             result['code'] = 0
             result['msg'] = 'register successful'
         result['type'] = 'register'
         return result
 
-    def login(self, username, password):
+    def login(self, username, password, ip):
         self.cur.execute('SELECT * FROM User WHERE username=?', (username,))
         entry = self.cur.fetchone()
         print(repr(entry))
         result = dict()
         if not entry:
-            result['code'] = 3
-            result['msg'] = 'already login'
+            result['code'] = 1
+            result['msg'] = 'nonexist username'
             result['type'] = 'login'
             result['token'] = 0
         elif entry[2]:
-            result['code'] = 1
-            result['msg'] = 'nonexist username'
+            result['code'] = 3
+            result['msg'] = 'already login'
             result['type'] = 'login'
             result['token'] = 0
         elif entry[1] == password:
             result['code'] = 0
             result['msg'] = 'login successful'
             result['type'] = 'login'
-            token = random.randint(0x1, 0xFFFFFFFF)
+            token = random.randint(0x1, 0x7FFFFFFF)
             result['token'] = token
             self.cur.execute('''UPDATE User
                                 SET isOnline = ?,
-                                    token=?
-                                WHERE username = ?;''', (True, token, username))
+                                    token=?,
+                                    ip=?
+                                WHERE username = ?;''', (True, token, ip, username))
             self.connection.commit()
         else:
             result['code'] = 2
@@ -157,3 +158,8 @@ class Handler:
             result['msg'] = 'invalid token'
         result['type'] = 'send-msg'
         return result
+
+    def get_ip(self, username):
+        self.cur.execute('SELECT * FROM User WHERE username=?', (username,))
+        entry = self.cur.fetchone()
+        return entry[4]

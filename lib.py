@@ -1,5 +1,6 @@
 # require all bytes are encoded in utf-8
 import json
+import socket
 
 ENCODING = 'utf-8'
 
@@ -15,11 +16,25 @@ def parse_header(header: bytes):
     return first_line, obj
 
 
-HEADER_TEMPLATE = 'HTTP/1.1 200 OK\r\nContent-Type:text/json;charset=utf-8\r\nConnection:' \
+RESPONSE_HEADER = 'HTTP/1.1 200 OK\r\nContent-Type:text/json;charset=utf-8\r\nConnection:' \
                   'keep-alive\r\nContent-Length:{}\r\n\r\n'
 
 
 def get_message(body):
     code = json.dumps(body).encode(ENCODING)
-    result = HEADER_TEMPLATE.format(len(code)).encode(ENCODING) + code
+    result = RESPONSE_HEADER.format(len(code)).encode(ENCODING) + code
     return result
+
+
+LISTEN_PORT = 1234
+
+REQUEST_HEADER = 'POST / HTTP/1.1\r\nContent-Type:text/json;charset=utf-8\r\nConnection:' \
+                 'keep-alive\r\nContent-Length:{}\r\n\r\n'
+
+
+def send_to_client(host, body):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.connect((host, LISTEN_PORT))
+        b_body = json.dumps(body).encode(ENCODING)
+        send_msg = REQUEST_HEADER.format(len(b_body)).encode(ENCODING) + b_body
+        sock.sendall(send_msg)

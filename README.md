@@ -203,3 +203,16 @@ Content-Length: <length>\r\n\r\n'
   }
   ```
   
+
+#### 1.8 发送消息 [服务器]
+
+* target: \
+
+* request body:
+
+  ```json
+  {
+      "from": <username>,
+      "msg": <message>
+  }
+  ```

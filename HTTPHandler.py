@@ -1,7 +1,9 @@
 import json
 import selectors
 import socket
+from threading import Thread
 
+import DataBaseHandler
 import lib
 
 
@@ -11,7 +13,7 @@ class Handler:
         self.sock: socket.socket = sock
         self.addr = addr
         self.log = log
-        self.db_handler = db_handler
+        self.db_handler: DataBaseHandler.Handler = db_handler
         self._recv_buffer = b''
         self._send_buffer = b''
         self.target = ''
@@ -46,8 +48,8 @@ class Handler:
                 if start_line[0] == 'POST':
                     self.target = start_line[1][1:]
                     self._body_len = int(self._request_header['Content-Length'])
+                    self.log.log('request target: ' + repr(self.target))
                     self.log.log('request header: ' + repr(self._request_header))
-                    self.log.log('request body len: ' + repr(self._body_len))
                     if self._body_len == 0:
                         self._change_state('w')
                 else:
@@ -63,23 +65,20 @@ class Handler:
             self._recv_buffer += data
 
     def write(self):
-        if not self._response_created:
+        if self._request_body and not self._response_created:
             self.create_response(self.target, self._request_body)
         self._write()
 
     def create_response(self, target, body):
         j_body = json.loads(body.decode('utf-8'))
-        obj = self.db_handler.process_target(target, j_body)
+        obj = self.db_handler.process_target(target, j_body, self.addr[0])
         self._send_buffer = lib.get_message(obj)
         self._response_created = True
-        if target == 'login' and obj['code'] == 0:
-            self.sel.sock_dict[j_body['username']] = self.sock
-            self.log.log('connection to ' + repr(self.addr) + j_body['username'] + ' added')
-        elif target == 'offline':
-            self.sel.sock_dict.pop(j_body['username'])
-            self.log.log('connection to ' + repr(self.addr) + j_body['username'] + ' removed')
-        elif target == 'send-msg':
-            msg = j_body['msg']
+        if target == 'send-msg':
+            send_msg = {'from': j_body['username'], 'msg': j_body['msg']}
+            ip = self.db_handler.get_ip(j_body['who'])
+            self.log.log('send-msg: ' + repr(send_msg) + 'to ' + ip)
+            Thread(target=lib.send_to_client, args=(ip, send_msg)).start()
 
     def _write(self):
         if self._send_buffer:
