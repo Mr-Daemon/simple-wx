@@ -65,6 +65,7 @@ Content-Length: <length>\r\n\r\n'
   | 0    | login successful   |
   | 1    | nonexist username  |
   | 2    | incorrect password |
+  | 3    | already login      |
 #### 1.3 添加好友
 
 * target: \add-friend

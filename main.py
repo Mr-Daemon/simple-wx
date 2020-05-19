@@ -15,7 +15,8 @@ def cmd():
 if __name__ == '__main__':
     log = Log('log.txt')
     with Handler('database.sqlite') as db_handler:
-        HOST = '192.168.31.27'
+        # your own server host
+        HOST = '192.168.1.6'
         PORT = 1234
         server = Server(HOST, PORT, log, db_handler)
         server.start()

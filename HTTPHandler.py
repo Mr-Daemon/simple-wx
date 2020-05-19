@@ -86,8 +86,7 @@ class Handler:
             self.log.log('send ' + repr(self._send_buffer[:index]) + ' to ' + str(self.addr))
             self._send_buffer = self._send_buffer[index:]
             if index and not self._send_buffer:
-                self.finish()
-                self._change_state('r')
+                self.close()
 
     def finish(self):
         self.log.log('finish sending response to ' + str(self.addr))
